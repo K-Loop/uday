@@ -4,6 +4,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import Progress from './components/Progress.jsx';
+import ArchitecturalLineMap from './components/ArchitecturalLineMap.jsx';
 
 import Home from './pages/Home.jsx';
 import Collections from './pages/Collections.jsx';
@@ -22,23 +23,13 @@ function GlobalAmbientBackground() {
             className="fixed inset-0 pointer-events-none -z-0 overflow-hidden transition-opacity duration-1000 ease-out"
             style={{ opacity: glowColor ? 1 : 0 }}
         >
-            {/* Massive central radial glow illuminating the whole screen */}
+            {/* Elegant restrained radial glow illuminating the whole screen from the center */}
             <div
                 className="absolute inset-0 transition-all duration-1000 ease-out"
                 style={{
                     background: glowColor
-                        ? `radial-gradient(ellipse 90% 80% at 50% 50%, ${glowColor} 0%, transparent 75%)`
+                        ? `radial-gradient(ellipse 75% 65% at 50% 48%, ${glowColor} 0%, transparent 70%)`
                         : 'transparent',
-                }}
-            />
-            {/* Secondary atmospheric diffusion layer */}
-            <div
-                className="absolute inset-0 transition-all duration-1000 ease-out"
-                style={{
-                    background: glowColor
-                        ? `radial-gradient(circle at 50% 40%, ${glowColor} 0%, transparent 60%)`
-                        : 'transparent',
-                    filter: 'blur(80px)',
                 }}
             />
         </div>
@@ -56,8 +47,13 @@ export default function App() {
 
     return (
         <AmbientGlowProvider>
-            <div className="relative min-h-screen bg-[#0b0b0b] text-[#F4F0E8] overflow-x-hidden">
+            <div className="relative min-h-screen bg-[#080808] text-[#F4F0E8] overflow-x-hidden">
+                {/* Architectural Blueprint Continuous Line Map Background */}
+                <ArchitecturalLineMap />
+
+                {/* Ambient Center Aura */}
                 <GlobalAmbientBackground />
+
                 <Progress />
                 <a href="#main" className="sr-only focus:not-sr-only">
                     Skip to content

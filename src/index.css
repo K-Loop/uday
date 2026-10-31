@@ -3,7 +3,7 @@
 @theme {
     --color-ivory: #F4F0E8;
     --color-cream: #EBE6DC;
-    --color-dark: #0b0b0b;
+    --color-dark: #080808;
     --color-surface: #141414;
     --color-surface-hover: #1c1c1c;
     --color-gold: #C5A880;
@@ -18,12 +18,12 @@
 }
 
 html {
-    background-color: #0b0b0b;
+    background-color: #080808;
 }
 
 body {
     margin: 0;
-    background-color: #0b0b0b;
+    background-color: #080808;
     color: #F4F0E8;
     font-family: var(--font-sans);
     overflow-x: hidden;
@@ -32,7 +32,7 @@ body {
 
 ::selection {
     background: #C5A880;
-    color: #0b0b0b;
+    color: #080808;
 }
 
 :focus-visible {
@@ -45,13 +45,16 @@ body {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-    background: #0b0b0b;
+    background: #080808;
 }
+
 ::-webkit-scrollbar-thumb {
     background: rgba(197, 168, 128, 0.25);
     border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(197, 168, 128, 0.5);
 }
@@ -59,6 +62,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;
+    }
+
+    .architectural-pulse-slow,
+    .architectural-pulse-vertical,
+    .architectural-pulse-delayed {
+        animation: none !important;
+    }
+
+    [data-reveal],
+    [data-clip],
+    [data-clip-horizontal],
+    [data-stagger] > * {
+        opacity: 1 !important;
+        transform: none !important;
+        clip-path: none !important;
     }
 }
 
@@ -80,12 +98,13 @@ body {
 .luxury-card {
     background: #121212;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .luxury-card:hover {
-    border-color: rgba(197, 168, 128, 0.35);
-    transform: translateY(-2px);
+    border-color: rgba(197, 168, 128, 0.45);
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(197, 168, 128, 0.08);
 }
 
 /* Watermark typography */
@@ -97,10 +116,36 @@ body {
     pointer-events: none;
 }
 
+/* Ghost editorial typography (oversized serif words behind content)
+   — Filled with warm ivory at 6% + thin champagne stroke for legible depth.
+   Visible enough to read at desktop size without competing with content. */
+.text-ghost {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: rgba(244, 240, 232, 0.06);
+    -webkit-text-stroke: 0.5px rgba(197, 168, 128, 0.18);
+    text-stroke: 0.5px rgba(197, 168, 128, 0.18);
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+    line-height: 1;
+    letter-spacing: 0.12em;
+}
+
+/* Architectural SVG groups hidden on mobile */
+@media (max-width: 767px) {
+    .arch-desktop-only {
+        display: none;
+    }
+}
+
 @keyframes floatSlow {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-8px);
     }
@@ -114,7 +159,33 @@ body {
     0% {
         transform: translateY(-100%);
     }
+
     100% {
         transform: translateY(200%);
     }
+}
+
+/* Architectural continuous line light pulses */
+@keyframes archPulse {
+    0% {
+        stroke-dashoffset: 0;
+    }
+
+    100% {
+        stroke-dashoffset: -1880;
+    }
+}
+
+.architectural-pulse-slow {
+    animation: archPulse 38s linear infinite;
+}
+
+.architectural-pulse-vertical {
+    animation: archPulse 44s linear infinite;
+    animation-delay: -12s;
+}
+
+.architectural-pulse-delayed {
+    animation: archPulse 48s linear infinite;
+    animation-delay: -24s;
 }
