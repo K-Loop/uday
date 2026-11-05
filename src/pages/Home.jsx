@@ -1,565 +1,919 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import Page from '../components/Page.jsx';
-import GlowCard from '../components/GlowCard.jsx';
-import ViewerSlot from '../three/ViewerSlot.jsx';
-import { artworks, price } from '../data/artworks.js';
-import { useReveal } from '../hooks/useReveal.js';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Lenis from 'lenis';
+import Navbar from '../components/Navbar.jsx';
+import IntroSplash from '../components/IntroSplash.jsx';
+import ArtCollectionSection from '../components/ArtCollectionSection.jsx';
+import ArtisticProcessSection from '../components/ArtisticProcessSection.jsx';
+import AboutSection from '../components/AboutSection.jsx';
+import ContactSection from '../components/ContactSection.jsx';
+import Footer from '../components/Footer.jsx';
+import { artworks, WHATSAPP } from '../data/artworks.js';
 
-import { ART_GLOW_MAP as ART_GLOW } from '../utils/glowPalette.js';
+gsap.registerPlugin(ScrollTrigger);
 
-// Framer Motion variants for guaranteed, visible staggered entrance in Hero on initial page load
-const heroContainerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.12,
-            delayChildren: 0.1,
-        },
-    },
-};
+const HEADING_LINES = [
+  { id: 'line-1', content: 'Art, Carved' },
+  { id: 'line-2', content: 'with ', highlight: 'Precision' },
+];
 
-const heroItemVariants = {
-    hidden: { opacity: 0, y: 32 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
-    },
-};
+const STATS = [
+  { top: '100+', bottom: 'Projects' },
+  { top: 'Homes', bottom: '& Interiors' },
+  { top: 'Custom', bottom: '3D Murals & Idols' },
+];
 
-const heroMediaVariants = {
-    hidden: { opacity: 0, scale: 0.94, y: 30 },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        y: 0,
-        transition: { duration: 1.1, ease: [0.16, 1, 0.3, 1] },
-    },
-};
+// ──────────────────────────────────────────────────────────────────
+// Memoized Hardware-Overlay Hero Background Video
+// - Keeps <video> at permanent opacity: 1 so Windows DirectComposition
+//   never demotes/promotes the hardware video plane (eliminates shaking/glitching)
+// - Uses an independent black curtain overlay above the video that fades out
+//   smoothly at 0.9s after the founder portrait has appeared
+// ──────────────────────────────────────────────────────────────────
+const HeroBackgroundVideo = memo(function HeroBackgroundVideo({
+  isIntroActive,
+}) {
+  const videoRef = useRef(null);
+  const isHeroVisibleRef = useRef(true);
+  const [curtainHidden, setCurtainHidden] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isIntroActive) {
+      video.pause();
+      setCurtainHidden(false);
+      return;
+    }
+
+    // Start decoding/playing silently behind the black curtain so decoder is warm
+    if (isHeroVisibleRef.current) {
+      const p = video.play();
+      if (p !== undefined) {
+        p.catch(() => {});
+      }
+    }
+
+    // Fade out the black curtain overlay AFTER the founder portrait has appeared
+    const timer = setTimeout(() => {
+      setCurtainHidden(true);
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [isIntroActive]);
+
+  // Automatically pause Hero video only when completely scrolled out of view
+  useEffect(() => {
+    const video = videoRef.current;
+    const heroEl = document.getElementById('hero-section');
+    if (!video || !heroEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isHeroVisibleRef.current = entry.isIntersecting;
+        if (entry.isIntersecting && !isIntroActive) {
+          if (video.paused) {
+            const p = video.play();
+            if (p !== undefined) p.catch(() => {});
+          }
+        } else if (!entry.isIntersecting && !video.paused) {
+          video.pause();
+        }
+      },
+      { threshold: 0.01 }
+    );
+
+    observer.observe(heroEl);
+    return () => observer.disconnect();
+  }, [isIntroActive]);
+
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-[#060504]">
+      <video
+        ref={videoRef}
+        src="/video/herobackground.mp4"
+        muted
+        loop
+        playsInline
+        preload="auto"
+        className="h-full w-full object-cover object-center"
+      />
+
+      {/* Directional dark overlay to preserve background sculptures & halo while ensuring crisp left-side text legibility */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(8, 6, 4, 0.72) 0%, rgba(10, 8, 5, 0.42) 34%, rgba(10, 8, 5, 0.08) 58%, rgba(8, 6, 4, 0.22) 100%)',
+        }}
+      />
+      {/* Top & bottom atmospheric vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(6, 5, 3, 0.48) 0%, rgba(6, 5, 3, 0) 20%, rgba(6, 5, 3, 0) 82%, rgba(6, 5, 3, 0.65) 100%)',
+        }}
+      />
+
+      {/* Independent Black Curtain Overlay — Fades out smoothly without touching <video> opacity */}
+      <div
+        aria-hidden="true"
+        style={{
+          opacity: curtainHidden ? 0 : 1,
+          transition: 'opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+        className="absolute inset-0 bg-[#060504] will-change-[opacity]"
+      />
+    </div>
+  );
+});
+
+const MemoArtCollectionSection = memo(ArtCollectionSection);
+const MemoArtisticProcessSection = memo(ArtisticProcessSection);
+const MemoAboutSection = memo(AboutSection);
+const MemoContactSection = memo(ContactSection);
+
+// ──────────────────────────────────────────────────────────────────
+// Floating Luxury "Back to Top" Button with Live Golden Progress Ring
+// ──────────────────────────────────────────────────────────────────
+const BackToTopButton = memo(function BackToTopButton({ onScrollToTop }) {
+  const [visible, setVisible] = useState(false);
+  const visibleRef = useRef(false);
+  const progressCircleRef = useRef(null);
+
+  useEffect(() => {
+    const circumference = 2 * Math.PI * 21; // r = 21
+
+    const updateProgress = (scrollY) => {
+      const shouldShow = scrollY > 360;
+      if (shouldShow !== visibleRef.current) {
+        visibleRef.current = shouldShow;
+        setVisible(shouldShow);
+      }
+
+      if (progressCircleRef.current) {
+        const maxScroll = Math.max(
+          1,
+          document.documentElement.scrollHeight - window.innerHeight
+        );
+        const ratio = Math.min(1, Math.max(0, scrollY / maxScroll));
+        const offset = circumference * (1 - ratio);
+        progressCircleRef.current.style.strokeDashoffset = `${offset}`;
+      }
+    };
+
+    const handleLenisScroll = (e) => {
+      updateProgress(e.detail.scroll);
+    };
+
+    window.addEventListener('uday-lenis-scroll', handleLenisScroll, {
+      passive: true,
+    });
+    return () => {
+      window.removeEventListener('uday-lenis-scroll', handleLenisScroll);
+    };
+  }, []);
+
+  const circumference = 2 * Math.PI * 21;
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, scale: 0.82, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.82, y: 16 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          onClick={onScrollToTop}
+          aria-label="Scroll back to top"
+          title="Back to Top"
+          className="
+            group fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50
+            flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center
+            rounded-full bg-[#110D09]/92
+            shadow-[0_10px_28px_rgba(0,0,0,0.75),0_0_18px_rgba(218,165,75,0.2)]
+            hover:bg-[#1A130C] hover:shadow-[0_12px_32px_rgba(232,184,96,0.38)]
+            transition-colors cursor-pointer select-none
+          "
+        >
+          {/* SVG Circular Golden Scroll Progress Ring */}
+          <svg
+            className="pointer-events-none absolute inset-0 h-full w-full -rotate-90"
+            viewBox="0 0 48 48"
+            fill="none"
+          >
+            <circle
+              cx="24"
+              cy="24"
+              r="21"
+              stroke="rgba(218, 168, 82, 0.22)"
+              strokeWidth="1.5"
+            />
+            <circle
+              ref={progressCircleRef}
+              cx="24"
+              cy="24"
+              r="21"
+              stroke="#E8B860"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference}
+            />
+          </svg>
+
+          {/* Upward Golden Arrow */}
+          <svg
+            className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#FBE39E] transition-transform duration-300 group-hover:-translate-y-0.5"
+            viewBox="0 0 18 18"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9 14.5V3.5M9 3.5L4.5 8M9 3.5L13.5 8"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+});
 
 export default function Home() {
-    const pageRef = useReveal();
-    const [highlightIndex, setHighlightIndex] = useState(0);
+  const [showIntro, setShowIntro] = useState(true);
+  const [activeTab, setActiveTab] = useState('home');
+  const [processModalOpen, setProcessModalOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState('/video/mural.mp4');
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [quoteForm, setQuoteForm] = useState({
+    name: '',
+    phone: '',
+    category: 'Divine Figures',
+    details: '',
+  });
 
-    const curatedHighlights = [
-        { num: 'N° 01', yearMedium: '2024 · Sculpted Bas-Relief',          title: artworks[0].title, artwork: artworks[0] },
-        { num: 'N° 02', yearMedium: '2024 · Layered Architectural Stone',  title: artworks[1].title, artwork: artworks[1] },
-        { num: 'N° 03', yearMedium: '2023 · Temple Tower Architectural Relic', title: artworks[2].title, artwork: artworks[2] },
-        { num: 'N° 04', yearMedium: '2024 · Zen Meditative Relief',        title: artworks[3].title, artwork: artworks[3] },
-        { num: 'N° 05', yearMedium: '2024 · Kalpavriksha Gold-Leaf Relief', title: artworks[4].title, artwork: artworks[4] },
+  const lenisRef = useRef(null);
+
+  // Pre-warm all gallery & section images in browser memory so category tabs & carousels load in 0ms
+  useEffect(() => {
+    const urls = [
+      '/Background2.png',
+      '/Backgroundthree.png',
+      '/background4.png',
+      '/background5.png',
+      ...artworks.map((a) => a.image),
     ];
+    urls.forEach((src) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+    });
+  }, []);
 
-    const nextHighlight = () => setHighlightIndex((p) => (p + 1) % curatedHighlights.length);
-    const prevHighlight = () => setHighlightIndex((p) => (p - 1 + curatedHighlights.length) % curatedHighlights.length);
+  // ──────────────────────────────────────────────────────────────────
+  // GSAP + Lenis 120Hz / 144Hz / 240Hz High-Refresh-Rate Smooth Scroll
+  // Forces scroll position to top (0, 0) on mount & reload
+  // ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
 
-    const disciplines = [
-        { title: '3D Architectural Carvings',   desc: 'Multi-tiered wall reliefs sculpted with dramatic projection so ambient light articulates every curve and shadow.',                                                     art: artworks[1], colSpan: 'lg:col-span-7' },
-        { title: 'Sacred Mythological Murals',   desc: 'Expansive wall murals drawn from classical epics, illuminated with natural mineral pigments and burnished gold accents.',                                            art: artworks[5], colSpan: 'lg:col-span-5' },
-        { title: 'South Indian Temple Art',      desc: 'Intricate gopurams, sanctum portals, and miniature architectural tiers honoring centuries of stonecraft heritage.',                                                 art: artworks[2], colSpan: 'lg:col-span-5' },
-        { title: 'Decorative Flora & Fauna',     desc: 'Sacred Kamadhenu, lotus haloes, and botanical Kalpavriksha panels crafted for contemplative contemporary sanctuaries.',                                            art: artworks[4], colSpan: 'lg:col-span-7' },
-    ];
+    const lenis = new Lenis({
+      autoRaf: false,
+      lerp: 0.1,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.5,
+      syncTouch: true,
+      smoothWheel: true,
+    });
 
-    return (
-        <Page>
-            <div ref={pageRef} className="relative">
+    lenisRef.current = lenis;
+    lenis.scrollTo(0, { immediate: true, force: true });
 
-                {/* ═══════════════════════════════════════════════════════════════
-                    § 1  HERO — Cinematic editorial grid
-                    ─ Staggered entrance via Framer Motion for visible smoothness
-                    ─ GSAP Scroll depth: Parallax on thumbs, video drift, ghost drift
-                    ═══════════════════════════════════════════════════════════════ */}
-                <section
-                    data-hero-scroll
-                    className="relative min-h-[92vh] flex flex-col justify-center px-6 md:px-12 lg:px-16 pt-8 pb-16 border-b border-white/[0.08] overflow-hidden"
-                >
-                    {/* Subtle ambient glow */}
-                    <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-                        <div className="absolute top-1/3 right-1/4 h-[500px] w-[500px] rounded-full bg-[#C5A880]/[0.03] blur-[150px]" />
-                    </div>
+    // Broadcast sub-frame scroll telemetry to Navbar & BackToTopButton
+    lenis.on('scroll', ({ scroll, direction, velocity }) => {
+      ScrollTrigger.update();
+      window.dispatchEvent(
+        new CustomEvent('uday-lenis-scroll', {
+          detail: { scroll, direction, velocity },
+        })
+      );
+    });
 
-                    {/* Ghost word — SCULPTURE with scroll parallax */}
-                    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0 hidden lg:block">
-                        <span
-                            data-ghost-parallax
-                            className="text-ghost absolute text-[26vw] leading-none left-[-4%] top-1/2 -translate-y-[48%]"
-                        >
-                            SCULPTURE
-                        </span>
-                    </div>
+    // Bind Lenis directly to GSAP's high-frequency RAF ticker
+    const updateTicker = (time) => {
+      lenis.raf(time * 1000);
+    };
 
-                    <motion.div
-                        variants={heroContainerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="relative z-10 mx-auto w-full max-w-[1560px] grid gap-12 lg:grid-cols-12 items-center"
-                    >
-                        {/* ── Left column ─────────────────────────────── */}
-                        <div data-hero-left className="lg:col-span-6 flex flex-col justify-center">
+    gsap.ticker.add(updateTicker);
+    gsap.ticker.lagSmoothing(0);
 
-                            {/* Eyebrow teaser */}
-                            <motion.div variants={heroItemVariants} className="flex items-start gap-4 mb-8 max-w-md">
-                                <div className="h-16 w-20 shrink-0 overflow-hidden rounded-sm border border-white/20 bg-[#161616]">
-                                    <img
-                                        src={artworks[3].image}
-                                        alt="Teaser"
-                                        className="h-full w-full object-cover transition-transform duration-700 hover:scale-110"
-                                    />
-                                </div>
-                                <p className="text-xs leading-relaxed text-[#F4F0E8]/60">
-                                    Discover exclusive, hand-crafted pieces shaped from raw materials and deep intention at Uday Arts' studio showcase.
-                                </p>
-                            </motion.div>
+    const handleBeforeUnload = () => {
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
-                            {/* Main title */}
-                            <motion.div variants={heroItemVariants}>
-                                <p className="font-serif text-3xl sm:text-4xl lg:text-5xl italic text-[#F4F0E8]/90 font-light">
-                                    Discover
-                                </p>
-                                <h1 className="font-serif text-6xl sm:text-7xl md:text-8xl lg:text-[7.2rem] font-light leading-[0.92] tracking-tight text-[#F4F0E8] mt-1">
-                                    Timeless <span className="italic text-[#C5A880] font-normal">Art</span>
-                                </h1>
-                            </motion.div>
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      gsap.ticker.remove(updateTicker);
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, []);
 
-                            {/* Sub heading */}
-                            <motion.div variants={heroItemVariants} className="mt-8 border-l border-[#C5A880]/50 pl-5">
-                                <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-[#F4F0E8]/90 font-light">
-                                    Crafted by <span className="italic text-[#C5A880]">Nature</span>,<br />
-                                    Curated with — <span className="italic text-[#C5A880]">Soul</span>
-                                </h2>
-                            </motion.div>
+  // Pause smooth scroll while intro splash or modals are open
+  useEffect(() => {
+    const lenis = lenisRef.current;
+    if (!lenis) return;
+    if (showIntro || processModalOpen || quoteModalOpen) {
+      lenis.stop();
+    } else {
+      lenis.start();
+    }
+  }, [showIntro, processModalOpen, quoteModalOpen]);
 
-                            {/* Body copy */}
-                            <motion.div variants={heroItemVariants} className="mt-7 max-w-xl text-xs sm:text-sm leading-relaxed text-[#F4F0E8]/65 space-y-3">
-                                <div className="text-[#C5A880] text-sm">❖</div>
-                                <p>
-                                    Each piece in the <span className="italic text-[#F4F0E8]">Uday Arts</span> collection is more than a work of art — it is a story. A moment captured in permanence.
-                                </p>
-                                <p>
-                                    Uday Arts is a sanctuary for rare and meaningful creations born from raw natural elements, refined by master hands, and created for enduring architectural environments. We turn raw stone, clay, and mineral pigments into quiet masterpieces — each one meant to be felt, not just seen.
-                                </p>
-                            </motion.div>
+  // Automatically sync Navbar active underline as user scrolls between Hero, Section 02, Section 03, Section 04, and Section 05
+  useEffect(() => {
+    const heroEl = document.getElementById('hero-section');
+    const workEl = document.getElementById('art-collection');
+    const processEl = document.getElementById('artistic-process');
+    const aboutEl = document.getElementById('about-section');
+    const contactEl = document.getElementById('contact-section');
+    if (!heroEl || !workEl) return;
 
-                            {/* CTAs */}
-                            <motion.div variants={heroItemVariants} className="mt-10 flex flex-wrap items-center gap-4">
-                                <Link
-                                    to="/collections"
-                                    className="inline-flex items-center gap-2 rounded-full bg-[#C5A880] px-7 py-3.5 text-xs uppercase tracking-[0.22em] font-semibold text-[#0b0b0b] transition-all duration-300 hover:bg-[#F4F0E8] hover:shadow-[0_0_25px_rgba(197,168,128,0.35)] hover:-translate-y-0.5"
-                                >
-                                    Explore the Collection <ArrowRight size={14} />
-                                </Link>
-                                <Link
-                                    to="/contact"
-                                    className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-transparent px-7 py-3.5 text-xs uppercase tracking-[0.22em] text-[#F4F0E8] transition-all duration-300 hover:border-[#C5A880] hover:text-[#C5A880] hover:-translate-y-0.5"
-                                >
-                                    Commission a Work
-                                </Link>
-                            </motion.div>
-
-                            {/* Artwork detail fragment — Gopuram temple detail (desktop only) */}
-                            <motion.div variants={heroItemVariants} className="hidden lg:flex items-end gap-4 mt-14 pt-6 border-t border-white/[0.07]">
-                                <div
-                                    data-parallax="0.08"
-                                    className="relative w-20 h-24 shrink-0 overflow-hidden rounded-sm border border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.7)] group"
-                                >
-                                    <img
-                                        src={artworks[2].image}
-                                        alt="Temple architectural detail"
-                                        className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-110"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#080808]/60 to-transparent" />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] uppercase tracking-[0.28em] text-[#C5A880]/70 font-medium">Detail Study</p>
-                                    <p className="text-[10px] text-[#F4F0E8]/45 mt-0.5 leading-snug max-w-[180px]">Gopuram tier — carved architectural elevation</p>
-                                    <p className="text-[9px] text-[#C5A880]/40 mt-1 uppercase tracking-widest">Temple Art · 2023</p>
-                                </div>
-                            </motion.div>
-                        </div>
-
-                        {/* ── Right column: video + companions ─────────── */}
-                        <div className="lg:col-span-6 relative flex flex-col justify-center">
-                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-
-                                {/* Video card — motion.div wrapper handles entrance, inner div handles GSAP scroll translation */}
-                                <motion.div variants={heroMediaVariants} className="sm:col-span-12">
-                                    <div data-hero-video className="w-full">
-                                        <GlowCard
-                                            glowColor={ART_GLOW.video}
-                                            className="relative w-full aspect-[16/9] rounded-sm border border-white/20 bg-[#121212] p-2.5 sm:p-3 shadow-[0_30px_80px_rgba(0,0,0,0.9)] group hover:border-[#C5A880]/70 transition-all duration-500"
-                                        >
-                                            <div className="relative h-full w-full overflow-hidden rounded-sm bg-black">
-                                                <video
-                                                    src="/video/mural.mp4"
-                                                    poster="/video/mural-poster.jpg"
-                                                    autoPlay muted loop playsInline preload="auto"
-                                                    className="h-full w-full object-cover object-[35%_50%] transition-transform duration-1000 group-hover:scale-105"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b]/90 via-black/20 to-[#0b0b0b]/40 pointer-events-none" />
-                                                <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-[#0b0b0b]/85 border border-[#C5A880]/30 px-3 py-1 backdrop-blur">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-[#C5A880] animate-pulse" />
-                                                    <span className="text-[9px] uppercase tracking-[0.22em] text-[#C5A880] font-medium">Living Atelier · Process</span>
-                                                </div>
-                                                <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between">
-                                                    <div>
-                                                        <p className="text-[9px] uppercase tracking-[0.25em] text-[#C5A880] font-medium">Studio Mastercraft</p>
-                                                        <h3 className="font-serif text-base sm:text-xl text-[#F4F0E8] font-light mt-0.5">Sacred Bas-Relief Mural in Progress</h3>
-                                                    </div>
-                                                    <Link to="/craft" className="rounded-full bg-white/10 border border-white/15 px-3 py-1 text-[9px] uppercase tracking-[0.2em] backdrop-blur hover:bg-[#C5A880] hover:text-[#0b0b0b] hover:border-[#C5A880] transition-all flex items-center gap-1.5 text-[#F4F0E8]">
-                                                        Our Craft <ArrowRight size={11} />
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        </GlowCard>
-                                    </div>
-                                </motion.div>
-
-                                {/* Companion: Shiva Relief */}
-                                <motion.div variants={heroMediaVariants} className="sm:col-span-6">
-                                    <div data-hero-thumb-left className="w-full">
-                                        <GlowCard glowColor={ART_GLOW[0]} className="relative w-full aspect-[4/3] rounded-sm border border-white/15 bg-[#141414] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] hover:border-[#C5A880]/60 transition-colors">
-                                            <div className="relative h-full w-full overflow-hidden rounded-sm bg-[#181818]">
-                                                <img
-                                                    src={artworks[0].image}
-                                                    alt="Signature Shiva Relief"
-                                                    className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b]/80 via-transparent to-transparent pointer-events-none" />
-                                                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                                                    <span className="text-[9px] uppercase tracking-[0.2em] text-[#C5A880]">Signature Relief</span>
-                                                    <Link to={`/collections/${artworks[0].slug}`} className="text-[9px] uppercase tracking-wider text-white/70 hover:text-[#C5A880]">View →</Link>
-                                                </div>
-                                            </div>
-                                        </GlowCard>
-                                    </div>
-                                </motion.div>
-
-                                {/* Companion: Kalpavriksha Gold */}
-                                <motion.div variants={heroMediaVariants} className="sm:col-span-6">
-                                    <div data-hero-thumb-right className="w-full">
-                                        <GlowCard glowColor={ART_GLOW[4]} className="relative w-full aspect-[4/3] rounded-sm border border-white/15 bg-[#141414] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] hover:border-[#C5A880]/60 transition-colors">
-                                            <div className="relative h-full w-full overflow-hidden rounded-sm bg-[#181818]">
-                                                <img
-                                                    src={artworks[4].image}
-                                                    alt="Kalpavriksha Gold Relief"
-                                                    className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b]/80 via-transparent to-transparent pointer-events-none" />
-                                                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                                                    <span className="text-[9px] uppercase tracking-[0.2em] text-[#DFCAAB]">24K Gold Leafing</span>
-                                                    <Link to={`/collections/${artworks[4].slug}`} className="text-[9px] uppercase tracking-wider text-white/70 hover:text-[#C5A880]">View →</Link>
-                                                </div>
-                                            </div>
-                                        </GlowCard>
-                                    </div>
-                                </motion.div>
-                            </div>
-
-                            {/* Scroll indicator */}
-                            <div className="mt-8 flex items-center justify-center lg:justify-start gap-3 text-[#F4F0E8]/50 text-xs uppercase tracking-[0.25em]">
-                                <span className="h-5 w-px bg-[#C5A880]" />
-                                <span>Scroll Down ↓</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                </section>
-
-                {/* ═══════════════════════════════════════════════════════════════
-                    § 2  HIGHLIGHTS — Curated carousel
-                    Ghost: COLLECTION right anchor
-                    Image reveal: Progressive vertical clip reveal with scale settle
-                    ═══════════════════════════════════════════════════════════════ */}
-                <section className="relative px-6 py-28 md:px-12 lg:px-16 border-b border-white/[0.08] bg-[#0b0b0b]/60 backdrop-blur-[2px] overflow-hidden">
-                    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0">
-                        <span data-ghost-parallax className="text-ghost absolute text-[12vw] top-[52%] -translate-y-1/2 right-[-1%]">COLLECTION</span>
-                    </div>
-
-                    <div className="relative z-10 mx-auto max-w-[1560px]">
-                        {/* Header */}
-                        <div data-stagger className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-12 border-b border-white/10">
-                            <div>
-                                <p className="text-[11px] uppercase tracking-[0.28em] text-[#C5A880] font-medium">Highlights from the Collection</p>
-                                <h2 className="mt-3 font-serif text-3xl sm:text-4xl md:text-5xl font-light text-[#F4F0E8]">
-                                    A curated selection <span className="italic text-[#C5A880]">of</span> exceptional works
-                                </h2>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <button onClick={prevHighlight} aria-label="Previous artwork" className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-[#F4F0E8] transition-all hover:border-[#C5A880] hover:text-[#C5A880]">
-                                        <ChevronLeft size={18} />
-                                    </button>
-                                    <button onClick={nextHighlight} aria-label="Next artwork" className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-[#F4F0E8] transition-all hover:border-[#C5A880] hover:text-[#C5A880]">
-                                        <ChevronRight size={18} />
-                                    </button>
-                                </div>
-                                <Link to="/collections" className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-xs uppercase tracking-[0.2em] text-[#F4F0E8] transition-all hover:border-[#C5A880] hover:text-[#C5A880]">
-                                    View Full Gallery <ArrowRight size={13} />
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Cards grid */}
-                        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {[0, 1, 2].map((offset) => {
-                                const idx = (highlightIndex + offset) % curatedHighlights.length;
-                                const item = curatedHighlights[idx];
-                                const artIdx = artworks.indexOf(item.artwork);
-                                return (
-                                    <GlowCard
-                                        as="article"
-                                        key={item.artwork.slug}
-                                        glowColor={ART_GLOW[artIdx] || ART_GLOW[0]}
-                                        className="group flex flex-col"
-                                        data-reveal
-                                    >
-                                        <Link to={`/collections/${item.artwork.slug}`} className="block">
-                                            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm border border-white/10 bg-[#161616]" data-clip>
-                                                <img
-                                                    loading="lazy"
-                                                    src={item.artwork.image}
-                                                    alt={item.title}
-                                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                                />
-                                                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500" />
-                                                <div className="absolute top-4 left-4 rounded-sm bg-[#0b0b0b]/80 px-2.5 py-1 border border-white/10 text-[10px] uppercase tracking-[0.2em] text-[#C5A880]">
-                                                    {item.num}
-                                                </div>
-                                            </div>
-                                            <div className="mt-5 border-t border-white/10 pt-4">
-                                                <p className="text-[11px] uppercase tracking-[0.22em] text-[#F4F0E8]/50">{item.yearMedium}</p>
-                                                <h3 className="mt-1 font-serif text-2xl text-[#F4F0E8] group-hover:text-[#C5A880] transition-colors">{item.title}</h3>
-                                                <p className="mt-1 text-xs text-[#C5A880] italic">{price(item.artwork)}</p>
-                                            </div>
-                                        </Link>
-                                    </GlowCard>
-                                );
-                            })}
-                        </div>
-
-                        <div className="mt-10 sm:hidden text-center">
-                            <Link to="/collections" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-xs uppercase tracking-[0.2em] text-[#F4F0E8]">
-                                View Full Gallery <ArrowRight size={13} />
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-                {/* ═══════════════════════════════════════════════════════════════
-                    § 3  LIVING ARCHIVE — Editorial disciplines grid
-                    Image reveal: Alternating horizontal / vertical reveals
-                    ═══════════════════════════════════════════════════════════════ */}
-                <section className="relative overflow-hidden px-6 py-32 md:px-12 lg:px-16 border-b border-white/[0.08] bg-[#0b0b0b]/60 backdrop-blur-[2px]">
-                    {/* Watermark */}
-                    <div aria-hidden className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 select-none overflow-hidden opacity-30 text-center">
-                        <span className="font-serif text-[12vw] font-bold tracking-[0.15em] text-watermark whitespace-nowrap">
-                            THE SOUL OF THE GALLERY
-                        </span>
-                    </div>
-
-                    <div className="relative z-10 mx-auto max-w-[1560px]">
-                        <div data-stagger className="flex items-center gap-4 mb-16">
-                            <span className="h-px w-16 bg-[#C5A880]" />
-                            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl font-light text-[#F4F0E8]">
-                                The Living Archive <span className="italic text-[#C5A880]">of</span> Uday Arts
-                            </h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                            {disciplines.map((d, idx) => {
-                                const artIdx = artworks.indexOf(d.art);
-                                const isEven = idx % 2 === 0;
-                                return (
-                                    <GlowCard
-                                        as="article"
-                                        key={d.title}
-                                        glowColor={ART_GLOW[artIdx] || ART_GLOW[1]}
-                                        className={`${d.colSpan} luxury-card p-6 md:p-8 rounded-sm group`}
-                                        data-reveal
-                                    >
-                                        <Link to={`/collections?c=${encodeURIComponent(d.art.category)}`} className="block">
-                                            <div
-                                                {...(isEven ? { 'data-clip': true } : { 'data-clip-horizontal': true })}
-                                                className="relative aspect-[16/10] w-full overflow-hidden rounded-sm bg-[#181818] border border-white/10"
-                                            >
-                                                <img
-                                                    loading="lazy"
-                                                    src={d.art.image}
-                                                    alt={d.title}
-                                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                                />
-                                                <span className="absolute top-4 left-4 rounded-sm bg-[#0b0b0b]/80 border border-white/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-[#C5A880]">
-                                                    Archive 0{idx + 1}
-                                                </span>
-                                            </div>
-                                            <div className="mt-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                                                <div>
-                                                    <p className="text-[10px] uppercase tracking-[0.25em] text-[#C5A880]">{d.art.category}</p>
-                                                    <h3 className="mt-1 font-serif text-2xl md:text-3xl text-[#F4F0E8]">{d.title}</h3>
-                                                    <p className="mt-2 max-w-lg text-xs md:text-sm text-[#F4F0E8]/65 leading-relaxed">{d.desc}</p>
-                                                </div>
-                                                <span className="inline-flex shrink-0 items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#C5A880] transition-transform duration-300 group-hover:translate-x-1">
-                                                    Explore Archive <ArrowRight size={13} />
-                                                </span>
-                                            </div>
-                                        </Link>
-                                    </GlowCard>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </section>
-
-                {/* ═══════════════════════════════════════════════════════════════
-                    § 4  INTERACTIVE SIGNATURE RELIEF
-                    Ghost: FORM bottom-right with subtle scrub
-                    ═══════════════════════════════════════════════════════════════ */}
-                <section className="relative px-6 py-28 md:px-12 lg:px-16 border-b border-white/[0.08] bg-[#0b0b0b]/60 backdrop-blur-[2px] overflow-hidden">
-                    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0">
-                        <span data-ghost-parallax className="text-ghost absolute text-[20vw] right-[-3%] bottom-[-8%]">FORM</span>
-                    </div>
-
-                    <div className="relative z-10 mx-auto max-w-[1560px] grid lg:grid-cols-12 gap-12 items-center">
-                        <div className="lg:col-span-6" data-parallax="0.06">
-                            <GlowCard glowColor={ART_GLOW[0]} glowRadius="180%">
-                                <ViewerSlot src={artworks[0].image} alt={artworks[0].title} />
-                            </GlowCard>
-                        </div>
-
-                        <div className="lg:col-span-6" data-stagger>
-                            <div className="flex items-center gap-3">
-                                <span className="h-px w-6 bg-[#C5A880]" />
-                                <p className="text-[11px] uppercase tracking-[0.28em] text-[#C5A880]">Interactive Relief Lighting</p>
-                            </div>
-                            <h2 className="mt-4 font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-[#F4F0E8]">
-                                {artworks[0].title}
-                            </h2>
-                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[#F4F0E8]/50">
-                                Hand-Carved High Relief · Responsive Gallery Lighting
-                            </p>
-                            <p className="mt-6 text-sm md:text-base leading-relaxed text-[#F4F0E8]/70 max-w-lg">
-                                {artworks[0].fullDescription}
-                            </p>
-                            <div className="mt-8 flex flex-wrap gap-4">
-                                <Link to={`/collections/${artworks[0].slug}`} className="inline-flex items-center gap-2 rounded-full bg-[#C5A880] px-7 py-3 text-xs uppercase tracking-[0.2em] font-semibold text-[#0b0b0b] transition-all hover:bg-[#F4F0E8] hover:-translate-y-0.5">
-                                    Examine Artwork Details <ArrowRight size={14} />
-                                </Link>
-                                <Link to={`/contact?artwork=${artworks[0].slug}`} className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-xs uppercase tracking-[0.2em] text-[#F4F0E8] transition-all hover:border-[#C5A880] hover:text-[#C5A880] hover:-translate-y-0.5">
-                                    Commission This Style
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* ═══════════════════════════════════════════════════════════════
-                    § 5  ARTISAN STORYTELLING
-                    Ghost: HERITAGE left with scrub
-                    Artwork fragment: gold-leaf detail strip below portraits
-                    ═══════════════════════════════════════════════════════════════ */}
-                <section className="relative px-6 py-28 md:px-12 lg:px-16 border-b border-white/[0.08] bg-[#090909]/70 backdrop-blur-[2px] overflow-hidden">
-                    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0">
-                        <span data-ghost-parallax className="text-ghost absolute text-[16vw] left-[-1%] top-1/2 -translate-y-1/2">HERITAGE</span>
-                    </div>
-
-                    <div className="relative z-10 mx-auto max-w-[1560px] grid lg:grid-cols-12 gap-14 items-center">
-
-                        {/* Left: editorial text */}
-                        <div className="lg:col-span-6 space-y-6" data-stagger>
-                            <div className="flex items-center gap-3">
-                                <span className="h-px w-8 bg-[#C5A880]" />
-                                <p className="text-[11px] uppercase tracking-[0.28em] text-[#C5A880] font-medium">The Sculptural Philosophy</p>
-                            </div>
-                            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl font-light text-[#F4F0E8] leading-[1.08]">
-                                Every Masterpiece <span className="italic text-[#C5A880]">Begins with</span> a Vision.
-                            </h2>
-                            <p className="text-sm md:text-base leading-relaxed text-[#F4F0E8]/75 pt-2">
-                                At Uday Arts, relief sculpting is an intimate dialogue with permanence. From raw unshaped clay and natural mineral pigments to graduated high-relief carvings, each piece is born from architectural intent and classical proportion.
-                            </p>
-                            <p className="text-sm md:text-base leading-relaxed text-[#F4F0E8]/65">
-                                We sculpt tactile sacred geometry, mythological moments, and site-specific wall reliefs that breathe under dynamic room lighting — transforming residential sanctuaries and architectural focal walls into enduring heirlooms.
-                            </p>
-                            <div className="pt-4 flex flex-wrap items-center gap-4">
-                                <Link to="/craft" className="inline-flex items-center gap-2 rounded-full bg-[#C5A880] px-7 py-3 text-xs uppercase tracking-[0.2em] font-semibold text-[#0b0b0b] transition-all hover:bg-[#F4F0E8] hover:-translate-y-0.5">
-                                    Traverse Our Craft <ArrowRight size={13} />
-                                </Link>
-                                <Link to="/studio" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-7 py-3 text-xs uppercase tracking-[0.2em] text-[#F4F0E8] transition-all hover:border-[#C5A880] hover:text-[#C5A880] hover:-translate-y-0.5">
-                                    Inside The Atelier
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Right: portrait grid + material detail */}
-                        <div className="lg:col-span-6 flex flex-col gap-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <GlowCard glowColor={ART_GLOW[1]} className="rounded-sm">
-                                    <div className="aspect-[4/5] overflow-hidden rounded-sm border border-white/10 bg-[#141414]" data-clip>
-                                        <img
-                                            loading="lazy"
-                                            src={artworks[1].image}
-                                            alt="High-relief architectural carving"
-                                            className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-                                        />
-                                    </div>
-                                </GlowCard>
-                                <GlowCard glowColor={ART_GLOW[5]} className="rounded-sm mt-8">
-                                    <div className="aspect-[4/5] overflow-hidden rounded-sm border border-white/10 bg-[#141414]" data-clip-horizontal>
-                                        <img
-                                            loading="lazy"
-                                            src={artworks[5].image}
-                                            alt="Mythological mural detailing"
-                                            className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-                                        />
-                                    </div>
-                                </GlowCard>
-                            </div>
-
-                            {/* Gold-leaf material detail fragment (desktop only) */}
-                            <div className="hidden lg:flex items-center gap-3 pt-2 border-t border-white/[0.06]" data-reveal>
-                                <div className="relative w-16 h-10 shrink-0 overflow-hidden rounded-sm border border-[#C5A880]/20 shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
-                                    <img
-                                        src={artworks[4].image}
-                                        alt="24K gold leaf surface detail"
-                                        className="w-full h-full object-cover object-top"
-                                    />
-                                    <div className="absolute inset-0 bg-[#C5A880]/10" />
-                                </div>
-                                <div>
-                                    <p className="text-[8px] uppercase tracking-[0.3em] text-[#C5A880]/60">Material Study — Gold Leaf Application</p>
-                                    <p className="text-[9px] text-[#F4F0E8]/35 mt-0.5">24K gold foil, mineral binders · Kalpavriksha panel detail</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* ═══════════════════════════════════════════════════════════════
-                    § 6  COMMISSIONS INVITATION
-                    Clean card — intentional negative space preserved
-                    ═══════════════════════════════════════════════════════════════ */}
-                <section className="relative px-6 py-28 md:px-12 lg:px-16 bg-[#0b0b0b]/60 backdrop-blur-[2px]">
-                    <div data-stagger className="mx-auto max-w-4xl rounded-sm border border-white/10 bg-[#121212] p-8 md:p-16 text-center shadow-[0_20px_70px_rgba(0,0,0,0.8)]">
-                        <span className="text-[11px] uppercase tracking-[0.3em] text-[#C5A880]">Private &amp; Architectural Commissions</span>
-                        <h2 className="mt-4 font-serif text-3xl sm:text-5xl md:text-6xl font-light text-[#F4F0E8]">
-                            A Work Created for <span className="italic text-[#C5A880]">Your Space.</span>
-                        </h2>
-                        <p className="mx-auto mt-6 max-w-xl text-sm md:text-base text-[#F4F0E8]/70 leading-relaxed">
-                            Every wall possesses unique proportions, viewing angles, and natural lighting. We collaborate with architects, interior designers, and collectors to sculpt site-specific masterworks.
-                        </p>
-                        <div className="mt-10 flex flex-wrap justify-center gap-4">
-                            <Link to="/contact" className="inline-flex items-center gap-2 rounded-full bg-[#C5A880] px-8 py-3.5 text-xs uppercase tracking-[0.22em] font-semibold text-[#0b0b0b] transition-all hover:bg-[#F4F0E8] hover:-translate-y-0.5">
-                                Discuss a Commission <ArrowRight size={14} />
-                            </Link>
-                            <Link to="/craft" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-xs uppercase tracking-[0.22em] text-[#F4F0E8] transition-all hover:border-[#C5A880] hover:text-[#C5A880] hover:-translate-y-0.5">
-                                Explore Our Process
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-            </div>
-        </Page>
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            if (entry.target.id === 'hero-section') {
+              setActiveTab((prev) => (prev === 'home' ? prev : 'home'));
+            } else if (entry.target.id === 'art-collection') {
+              setActiveTab((prev) => (prev === 'work' ? prev : 'work'));
+            } else if (entry.target.id === 'artistic-process') {
+              setActiveTab((prev) => (prev === 'process' ? prev : 'process'));
+            } else if (entry.target.id === 'about-section') {
+              setActiveTab((prev) => (prev === 'about' ? prev : 'about'));
+            } else if (entry.target.id === 'contact-section') {
+              setActiveTab((prev) => (prev === 'contact' ? prev : 'contact'));
+            }
+          }
+        });
+      },
+      { threshold: 0.35 }
     );
+
+    observer.observe(heroEl);
+    observer.observe(workEl);
+    if (processEl) observer.observe(processEl);
+    if (aboutEl) observer.observe(aboutEl);
+    if (contactEl) observer.observe(contactEl);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScrollToWork = useCallback(() => {
+    const el = document.getElementById('art-collection');
+    if (!el) return;
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(el, { duration: 1.25 });
+    } else {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleSelectArtworkForQuote = useCallback((artwork) => {
+    setQuoteForm((prev) => ({
+      ...prev,
+      category: artwork.category || 'Divine Figures',
+      details: `Enquiring about "${artwork.title}" (${artwork.medium}, ${artwork.dimensions}).`,
+    }));
+    setQuoteModalOpen(true);
+  }, []);
+
+  const handleOpenQuote = useCallback(() => setQuoteModalOpen(true), []);
+  const handleOpenProcess = useCallback(() => setProcessModalOpen(true), []);
+  const handleIntroComplete = useCallback(() => {
+    window.scrollTo(0, 0);
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { immediate: true, force: true });
+    }
+    setActiveTab('home');
+    setShowIntro(false);
+  }, []);
+
+  const handleScrollToTop = useCallback(() => {
+    setActiveTab('home');
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { duration: 1.2 });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleQuoteSubmit = (e) => {
+    e.preventDefault();
+    const text = [
+      'UDAY ARTS — QUOTE INQUIRY',
+      quoteForm.name && `Name: ${quoteForm.name}`,
+      quoteForm.phone && `Phone: ${quoteForm.phone}`,
+      `Category: ${quoteForm.category}`,
+      quoteForm.details && `Details: ${quoteForm.details}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    window.open(
+      `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+    setQuoteModalOpen(false);
+  };
+
+  return (
+    <div className="relative w-full min-h-[100svh] bg-[#060504] text-[#F7F4EE] overflow-x-hidden select-none">
+      {/* ══════════════════════════════════════════════════════════════════
+          FIRST INTRO SPLASH SCREEN (/video/intro.mp4)
+          ══════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showIntro && (
+          <IntroSplash key="intro-splash" onComplete={handleIntroComplete} />
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SCULPTED FLOATING NAVBAR
+          Reveals at Step 3 (after Black Background -> Founder Portrait)
+          Shortens into Simplified Pill on Scroll Down; Normal on Scroll Up
+          ══════════════════════════════════════════════════════════════════ */}
+      {!showIntro && (
+        <Navbar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          onOpenQuote={handleOpenQuote}
+          onOpenProcess={handleOpenProcess}
+          lenisRef={lenisRef}
+          revealDelay={0.98}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 01: HERO (Choreographed 3-Stage Reveal)
+          Stage 1 (0.00s): Pure Black Background (#060504)
+          Stage 2 (0.15s): Founder Portrait (/artist.png) emerges first
+          Stage 3 (0.92s): Hero Video + Left UI Text + Navbar reveal together
+          ══════════════════════════════════════════════════════════════════ */}
+      <section
+        id="hero-section"
+        className="relative w-full min-h-[100svh] lg:h-[100svh] flex flex-col justify-between lg:block overflow-hidden bg-[#060504]"
+      >
+        {/* Stage 1 -> Stage 3: Black Curtain then Smooth Video Reveal at 0.92s */}
+        <HeroBackgroundVideo isIntroActive={showIntro} />
+
+        {/* Stage 3 (1.02s+): Left-Side Hero UI Content (Centered on Mobile, Left-Aligned on Desktop) */}
+        {!showIntro && (
+          <div className="relative z-30 mx-auto w-full max-w-[1720px] px-5 sm:px-10 lg:px-[5.8%] pt-24 sm:pt-28 lg:pt-0 lg:h-full flex items-center justify-center lg:justify-start pointer-events-none">
+            <div className="w-full max-w-[560px] xl:max-w-[640px] lg:mt-14 flex flex-col items-center lg:items-start text-center lg:text-left pointer-events-auto">
+              {/* Small Eyebrow: 3D CNC CARVINGS + Gold Bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 1.0,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className="mb-3.5 sm:mb-4 xl:mb-5 flex flex-col items-center lg:items-start"
+              >
+                <p className="text-[11px] sm:text-[13px] xl:text-[14px] uppercase tracking-[0.36em] text-[#E5DFD3] font-normal">
+                  3D CNC CARVINGS
+                </p>
+                <div className="mt-2.5 sm:mt-3 h-[2px] w-[56px] bg-gradient-to-r from-[#F7D788] via-[#DDA84E] to-[#B88028]" />
+              </motion.div>
+
+              {/* Main Heading: Line-by-Line Reveal */}
+              <h1
+                className="text-[38px] sm:text-[56px] md:text-[64px] lg:text-[68px] xl:text-[80px] 2xl:text-[88px] leading-[1.06] tracking-[-0.01em] font-normal text-[#F7F4EE]"
+                style={{ fontFamily: 'var(--font-serif)' }}
+              >
+                {HEADING_LINES.map((line, index) => (
+                  <span key={line.id} className="block overflow-hidden pb-1">
+                    <motion.span
+                      initial={{ opacity: 0, y: 42 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.8,
+                        delay: 1.08 + index * 0.12,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      className="block will-change-transform"
+                    >
+                      {line.content}
+                      {line.highlight && (
+                        <span className="gold-italic-text pr-1 sm:pr-2">
+                          {line.highlight}
+                        </span>
+                      )}
+                    </motion.span>
+                  </span>
+                ))}
+              </h1>
+
+              {/* Description: Divine Murals | God Idols | 3D Sculptures | Interiors */}
+              <motion.p
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 1.28,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className="mt-4 sm:mt-5 xl:mt-6 text-[12px] sm:text-[15px] xl:text-[17.5px] font-light tracking-[0.025em] text-[#E4DEC8]/90"
+              >
+                <span>Divine Murals</span>
+                <span className="mx-2 sm:mx-3 text-white/35">|</span>
+                <span>God Idols</span>
+                <span className="mx-2 sm:mx-3 text-white/35">|</span>
+                <span>3D Sculptures</span>
+                <span className="mx-2 sm:mx-3 text-white/35">|</span>
+                <span>Interiors</span>
+              </motion.p>
+
+              {/* CTA Buttons: Get a Quote → & Watch Process */}
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 1.38,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className="mt-6 sm:mt-7 xl:mt-9 flex flex-wrap items-center justify-center lg:justify-start gap-3.5 sm:gap-5"
+              >
+                <button
+                  type="button"
+                  onClick={handleOpenQuote}
+                  className="btn-gold-pill inline-flex items-center gap-2.5 sm:gap-3 rounded-full px-6 sm:px-8 py-3 sm:py-3.5 text-[13px] sm:text-[15.5px] font-medium cursor-pointer"
+                >
+                  <span>Get a Quote</span>
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M3 8H13M13 8L9 4M13 8L9 12"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenProcess}
+                  className="btn-glass-pill inline-flex items-center gap-2.5 sm:gap-3 rounded-full px-6 sm:px-8 py-3 sm:py-3.5 text-[13px] sm:text-[15.5px] font-normal cursor-pointer"
+                >
+                  <svg
+                    className="w-3.5 h-3.5 text-[#F7F4EE]"
+                    viewBox="0 0 14 16"
+                    fill="currentColor"
+                  >
+                    <path d="M2 1.8L12.5 8L2 14.2V1.8Z" />
+                  </svg>
+                  <span>Watch Process</span>
+                </button>
+              </motion.div>
+
+              {/* Three Small Statistics Below Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 1.48,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className="mt-7 sm:mt-11 xl:mt-14 flex items-center justify-center lg:justify-start"
+              >
+                {STATS.map((stat, idx) => (
+                  <div key={stat.top} className="flex items-center">
+                    <div className="text-center lg:text-left">
+                      <p
+                        className="text-[18px] sm:text-[23px] xl:text-[26px] leading-tight font-normal text-[#F7F4EE]"
+                        style={{ fontFamily: 'var(--font-serif)' }}
+                      >
+                        {stat.top}
+                      </p>
+                      <p className="mt-0.5 text-[11px] sm:text-[12.5px] xl:text-[13.5px] font-light text-[#C4BCB0]">
+                        {stat.bottom}
+                      </p>
+                    </div>
+
+                    {idx < STATS.length - 1 && (
+                      <span
+                        aria-hidden="true"
+                        className="mx-4 sm:mx-7 xl:mx-8 h-8 sm:h-9 w-px bg-white/18"
+                      />
+                    )}
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 2 (0.15s): Founder Portrait (/artist.png) — Reveals FIRST on the Black Background */}
+        {!showIntro && (
+          <motion.div
+            initial={{ opacity: 0, y: 34, scale: 0.975 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              duration: 0.85,
+              delay: 0.15,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="
+              relative lg:absolute z-20
+              bottom-0
+              mx-auto lg:mx-0
+              mt-3 lg:mt-0
+              w-[270px] sm:w-[360px] md:w-[430px]
+              lg:w-[clamp(560px,41.2vw,790px)]
+              lg:left-[52.4%] lg:-translate-x-1/2
+              pointer-events-none flex items-end justify-center
+              will-change-transform
+            "
+          >
+            <img
+              src="/artist.png"
+              alt="Uday Arts Founder"
+              decoding="async"
+              className="founder-portrait-img w-full h-auto max-h-[48svh] sm:max-h-[56svh] lg:max-h-[96.8svh] object-contain object-bottom"
+            />
+          </motion.div>
+        )}
+
+        {/* 4. Soft Bottom Transition Feather Bridge into Section 02 */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[25] h-20"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(9, 7, 5, 0) 0%, rgba(9, 7, 5, 0.6) 55%, #090705 100%)',
+          }}
+        />
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 02: THE ART COLLECTION (/Background2.png)
+          ══════════════════════════════════════════════════════════════════ */}
+      <MemoArtCollectionSection
+        onSelectArtworkForQuote={handleSelectArtworkForQuote}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 03: THE ARTISTIC PROCESS (/Backgroundthree.png)
+          ══════════════════════════════════════════════════════════════════ */}
+      <MemoArtisticProcessSection />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 04: ABOUT UDAY ARTS (/background4.png + /artist.png)
+          ══════════════════════════════════════════════════════════════════ */}
+      <MemoAboutSection onDiscoverWork={handleScrollToWork} />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 05: CONTACT (/background5.png)
+          ══════════════════════════════════════════════════════════════════ */}
+      <MemoContactSection />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          LUXURY CHARCOAL & GOLD EDITORIAL FOOTER
+          ══════════════════════════════════════════════════════════════════ */}
+      <Footer
+        lenisRef={lenisRef}
+        onSelectTab={setActiveTab}
+        onOpenQuote={handleOpenQuote}
+        onOpenProcess={handleOpenProcess}
+        onScrollToTop={handleScrollToTop}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          FLOATING BACK TO TOP BUTTON WITH GOLDEN SCROLL PROGRESS RING
+          ══════════════════════════════════════════════════════════════════ */}
+      {!showIntro && <BackToTopButton onScrollToTop={handleScrollToTop} />}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          WATCH PROCESS VIDEO MODAL (/video/mural.mp4 & /video/intro.mp4)
+          ══════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {processModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 sm:p-6 select-text"
+            onClick={() => setProcessModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.28 }}
+              className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-[#D8A54B]/45 bg-[#120E0A] shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="text-lg tracking-[0.18em] uppercase text-[#F7F4EE]"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
+                    Uday Arts — Crafting Process
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveVideo('/video/mural.mp4')}
+                    className={`rounded-full px-3.5 py-1 text-xs uppercase tracking-[0.14em] transition-colors cursor-pointer ${
+                      activeVideo === '/video/mural.mp4'
+                        ? 'bg-[#D8A54B] text-[#1A1105] font-semibold'
+                        : 'border border-white/20 text-[#E5DFD3]'
+                    }`}
+                  >
+                    Mural Showcase
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveVideo('/video/intro.mp4')}
+                    className={`rounded-full px-3.5 py-1 text-xs uppercase tracking-[0.14em] transition-colors cursor-pointer ${
+                      activeVideo === '/video/intro.mp4'
+                        ? 'bg-[#D8A54B] text-[#1A1105] font-semibold'
+                        : 'border border-white/20 text-[#E5DFD3]'
+                    }`}
+                  >
+                    Replay Intro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProcessModalOpen(false)}
+                    className="ml-2 rounded-full border border-white/20 px-3 py-1 text-xs uppercase tracking-[0.14em] text-white/80 hover:border-white cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="aspect-video w-full bg-black">
+                <video
+                  key={activeVideo}
+                  src={activeVideo}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          GET A QUOTE MODAL
+          ══════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {quoteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 sm:p-6 select-text"
+            onClick={() => setQuoteModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.28 }}
+              className="relative w-full max-w-lg rounded-2xl border border-[#D8A54B]/45 bg-[#14100B] p-6 sm:p-8 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#D8A54B]">
+                    3D CNC Carvings &amp; Murals
+                  </p>
+                  <h2
+                    className="mt-1 text-2xl sm:text-3xl font-normal text-[#F7F4EE]"
+                    style={{ fontFamily: 'var(--font-serif)' }}
+                  >
+                    Request a Custom Quote
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuoteModalOpen(false)}
+                  className="rounded-full border border-white/20 px-3 py-1 text-xs uppercase tracking-[0.14em] text-white/80 hover:border-white cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              <form onSubmit={handleQuoteSubmit} className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-[0.18em] text-[#C4BCB0] mb-1.5">
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={quoteForm.name}
+                    onChange={(e) =>
+                      setQuoteForm({ ...quoteForm, name: e.target.value })
+                    }
+                    placeholder="Enter your name"
+                    className="w-full rounded-lg border border-white/15 bg-black/50 px-4 py-2.5 text-sm text-white placeholder-white/35 focus:border-[#D8A54B] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-[0.18em] text-[#C4BCB0] mb-1.5">
+                    Phone / WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={quoteForm.phone}
+                    onChange={(e) =>
+                      setQuoteForm({ ...quoteForm, phone: e.target.value })
+                    }
+                    placeholder="+91"
+                    className="w-full rounded-lg border border-white/15 bg-black/50 px-4 py-2.5 text-sm text-white placeholder-white/35 focus:border-[#D8A54B] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-[0.18em] text-[#C4BCB0] mb-1.5">
+                    Category
+                  </label>
+                  <select
+                    value={quoteForm.category}
+                    onChange={(e) =>
+                      setQuoteForm({ ...quoteForm, category: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-white/15 bg-[#120E0A] px-4 py-2.5 text-sm text-white focus:border-[#D8A54B] focus:outline-none"
+                  >
+                    <option value="Divine Figures">Divine Figures</option>
+                    <option value="3D Sculptures">3D Sculptures</option>
+                    <option value="Wall Murals">Wall Murals</option>
+                    <option value="Interior Panels">Interior Panels</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-[0.18em] text-[#C4BCB0] mb-1.5">
+                    Wall Dimensions &amp; Project Details
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={quoteForm.details}
+                    onChange={(e) =>
+                      setQuoteForm({ ...quoteForm, details: e.target.value })
+                    }
+                    placeholder="Approximate dimensions, location, or reference..."
+                    className="w-full rounded-lg border border-white/15 bg-black/50 px-4 py-2.5 text-sm text-white placeholder-white/35 focus:border-[#D8A54B] focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-gold-pill w-full rounded-full py-3.5 text-xs font-semibold uppercase tracking-[0.18em] cursor-pointer"
+                >
+                  Send Inquiry on WhatsApp →
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
