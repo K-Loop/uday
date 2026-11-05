@@ -1,26 +1,26 @@
 const imageFiles = [
-  "WhatsApp Image 2026-10-29 at 1.56.35 PM.jpeg",     // 1: Framed Ganesha 3D Relief
-  "WhatsApp Image 2026-10-29 at 1.56.36 PM (1).jpeg", // 2: Shiva Sculpted 3D Bust
-  "WhatsApp Image 2026-10-29 at 1.56.36 PM (2).jpeg", // 3: Meditating Buddha Halo Relief
-  "WhatsApp Image 2026-10-29 at 1.56.36 PM.jpeg",     // 4: Sculpted Stallion Relief
-  "WhatsApp Image 2026-10-29 at 1.56.37 PM (1).jpeg", // 5: Lotus Ganesha & Kamadhenu Interior Wall Panel
-  "WhatsApp Image 2026-10-29 at 1.56.37 PM (2).jpeg", // 6: Golden Lotus Ganesha Relief
-  "WhatsApp Image 2026-10-29 at 1.56.37 PM.jpeg",     // 7: Hanuman Interior Feature Wall Mural
-  "WhatsApp Image 2026-10-29 at 1.56.38 PM (1).jpeg", // 8: Carved Sanctum Relief Wall Panel
-  "WhatsApp Image 2026-10-29 at 1.56.38 PM (2).jpeg", // 9: Living Room Hanuman Wall Mural
-  "WhatsApp Image 2026-10-29 at 1.56.38 PM.jpeg",     // 10: Devotional Carved Figure Relief
-  "WhatsApp Image 2026-10-29 at 1.56.39 PM (1).jpeg", // 11: Temple Gopuram Sanctum Arch (Gold & Black)
-  "WhatsApp Image 2026-10-29 at 1.56.39 PM (2).jpeg", // 12: Temple Gopuram Raw CNC Carving
-  "WhatsApp Image 2026-10-29 at 1.56.39 PM.jpeg",     // 13: Hanuman Sculpted Bust
-  "WhatsApp Image 2026-10-29 at 1.56.40 PM (1).jpeg", // 14: Bespoke Carved Relief Figure
-  "WhatsApp Image 2026-10-29 at 1.56.40 PM (2).jpeg", // 15: Custom Figural Sculpture
-  "WhatsApp Image 2026-10-29 at 1.56.40 PM.jpeg",     // 16: Temple Gopuram Sanctum Standalone View
-  "WhatsApp Image 2026-10-29 at 1.56.41 PM (1).jpeg", // 17: Kamadhenu Gold Leaf Interior Panel
-  "WhatsApp Image 2026-10-29 at 1.56.41 PM (2).jpeg", // 18: Tree of Life Raw Sculpted Relief Panel
-  "WhatsApp Image 2026-10-29 at 1.56.41 PM.jpeg",     // 19: Kamadhenu & Tree of Life Panel
-  "WhatsApp Image 2026-10-29 at 1.56.42 PM (1).jpeg", // 20: Kurukshetra Chariot 3D Relief Mural
-  "WhatsApp Image 2026-10-29 at 1.56.42 PM (2).jpeg", // 21: Hanuman & the Golden Sun Mural
-  "WhatsApp Image 2026-10-29 at 1.56.42 PM.jpeg",     // 22: The Chariot Relief (Sculpted Mural)
+  "WhatsApp Image 2026-10-29 at 1.56.35 PM.webp",     // 1: Framed Ganesha 3D Relief
+  "WhatsApp Image 2026-10-29 at 1.56.36 PM (1).webp", // 2: Shiva Sculpted 3D Bust
+  "WhatsApp Image 2026-10-29 at 1.56.36 PM (2).webp", // 3: Meditating Buddha Halo Relief
+  "WhatsApp Image 2026-10-29 at 1.56.36 PM.webp",     // 4: Sculpted Stallion Relief
+  "WhatsApp Image 2026-10-29 at 1.56.37 PM (1).webp", // 5: Lotus Ganesha & Kamadhenu Interior Wall Panel
+  "WhatsApp Image 2026-10-29 at 1.56.37 PM (2).webp", // 6: Golden Lotus Ganesha Relief
+  "WhatsApp Image 2026-10-29 at 1.56.37 PM.webp",     // 7: Hanuman Interior Feature Wall Mural
+  "WhatsApp Image 2026-10-29 at 1.56.38 PM (1).webp", // 8: Carved Sanctum Relief Wall Panel
+  "WhatsApp Image 2026-10-29 at 1.56.38 PM (2).webp", // 9: Living Room Hanuman Wall Mural
+  "WhatsApp Image 2026-10-29 at 1.56.38 PM.webp",     // 10: Devotional Carved Figure Relief
+  "WhatsApp Image 2026-10-29 at 1.56.39 PM (1).webp", // 11: Pooja Mandir Gopuram Arch (Gold & Black)
+  "WhatsApp Image 2026-10-29 at 1.56.39 PM (2).webp", // 12: Pooja Mandir Gopuram Raw CNC Carving
+  "WhatsApp Image 2026-10-29 at 1.56.39 PM.webp",     // 13: Hanuman Sculpted Bust
+  "WhatsApp Image 2026-10-29 at 1.56.40 PM (1).webp", // 14: Bespoke Carved Relief Figure
+  "WhatsApp Image 2026-10-29 at 1.56.40 PM (2).webp", // 15: Custom Figural Sculpture
+  "WhatsApp Image 2026-10-29 at 1.56.40 PM.webp",     // 16: Pooja Mandir Gopuram Standalone View
+  "WhatsApp Image 2026-10-29 at 1.56.41 PM (1).webp", // 17: Kamadhenu Gold Leaf Interior Panel
+  "WhatsApp Image 2026-10-29 at 1.56.41 PM (2).webp", // 18: Tree of Life Raw Sculpted Relief Panel
+  "WhatsApp Image 2026-10-29 at 1.56.41 PM.webp",     // 19: Kamadhenu & Tree of Life Panel
+  "WhatsApp Image 2026-10-29 at 1.56.42 PM (1).webp", // 20: Kurukshetra Chariot 3D Relief Mural
+  "WhatsApp Image 2026-10-29 at 1.56.42 PM (2).webp", // 21: Hanuman & the Golden Sun Mural
+  "WhatsApp Image 2026-10-29 at 1.56.42 PM.webp",     // 22: The Chariot Relief (Sculpted Mural)
 ];
 
 const art = (number) => `/art/${encodeURIComponent(imageFiles[number - 1])}`;

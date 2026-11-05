@@ -350,7 +350,7 @@ export default function ContactSection() {
         className="section-bg-feather-top pointer-events-none absolute inset-0 z-0 overflow-hidden"
       >
         <motion.img
-          src="/background5.png"
+          src="/background5.webp"
           alt=""
           loading="eager"
           decoding="async"

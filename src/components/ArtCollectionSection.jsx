@@ -187,7 +187,7 @@ export default function ArtCollectionSection({ onSelectArtworkForQuote }) {
           ══════════════════════════════════════════════════════════════════ */}
       <div className="section-bg-feather-both pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <img
-          src="/Background2.png"
+          src="/Background2.webp"
           alt=""
           loading="eager"
           decoding="async"

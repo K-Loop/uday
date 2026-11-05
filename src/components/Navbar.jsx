@@ -461,7 +461,7 @@ export default function Navbar({
                   >
                     <div className="relative h-[44px] w-[44px] xl:h-[50px] xl:w-[50px] rounded-full p-[1.5px] bg-gradient-to-b from-white/90 via-[#C8C8C8] to-white/40 shadow-[0_0_20px_rgba(255,230,175,0.22)]">
                       <img
-                        src="/logo.png"
+                        src="/logo.webp"
                         alt="Uday Arts Official Logo"
                         className="h-full w-full rounded-full object-cover"
                       />
@@ -579,7 +579,7 @@ export default function Navbar({
               >
                 <div className="h-[34px] w-[34px] rounded-full p-[1px] bg-gradient-to-b from-white/90 via-[#C8C8C8] to-white/40">
                   <img
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt="Uday Arts Logo"
                     className="h-full w-full rounded-full object-cover"
                   />
@@ -649,7 +649,7 @@ export default function Navbar({
             className="flex items-center gap-2.5 text-left"
           >
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt="Uday Arts Logo"
               className={`${
                 isCompact ? 'h-7 w-7' : 'h-9 w-9'

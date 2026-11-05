@@ -11,9 +11,9 @@ const COMPARISON_PAIRS = [
     id: 'ganesha-sculpture',
     label: 'Ganesha, Sacred 3D Figure',
     subtitle: 'Devotional 3D Carved Sculpture · 4.5 ft × 3.5 ft',
-    beforeImg: '/art/WhatsApp%20Image%202026-10-29%20at%201.56.35%20PM.jpeg',
+    beforeImg: '/art/WhatsApp%20Image%202026-10-29%20at%201.56.35%20PM.webp',
     afterImg:
-      '/art/WhatsApp%20Image%202026-10-29%20at%201.56.37%20PM%20(2).jpeg',
+      '/art/WhatsApp%20Image%202026-10-29%20at%201.56.37%20PM%20(2).webp',
     beforeStage: 'Unfinished CNC Carved Idol',
     afterStage: 'Consecrated Gold & Polychrome Finish',
     viewBox: '0 0 680 540',
@@ -24,9 +24,9 @@ const COMPARISON_PAIRS = [
     id: 'chariot-mural',
     label: 'The Chariot Relief Mural',
     subtitle: 'Mythological 3D Wall Mural · 10 ft × 5 ft',
-    beforeImg: '/art/WhatsApp%20Image%202026-10-29%20at%201.56.42%20PM.jpeg',
+    beforeImg: '/art/WhatsApp%20Image%202026-10-29%20at%201.56.42%20PM.webp',
     afterImg:
-      '/art/WhatsApp%20Image%202026-10-29%20at%201.56.42%20PM%20(1).jpeg',
+      '/art/WhatsApp%20Image%202026-10-29%20at%201.56.42%20PM%20(1).webp',
     beforeStage: 'Raw High-Density CNC Relief',
     afterStage: 'Polychrome & Burnished Gold Leaf',
     viewBox: '0 0 740 540',
@@ -38,8 +38,8 @@ const COMPARISON_PAIRS = [
     label: 'Kamadhenu & Tree of Life',
     subtitle: '3D CNC Carved Interior Panel · 8 ft × 5 ft',
     beforeImg:
-      '/art/WhatsApp%20Image%202026-10-29%20at%201.56.41%20PM%20(2).jpeg',
-    afterImg: '/art/WhatsApp%20Image%202026-10-29%20at%201.56.41%20PM.jpeg',
+      '/art/WhatsApp%20Image%202026-10-29%20at%201.56.41%20PM%20(2).webp',
+    afterImg: '/art/WhatsApp%20Image%202026-10-29%20at%201.56.41%20PM.webp',
     beforeStage: 'Raw 3D CNC Sculpted Relief',
     afterStage: '24K Gold Patina & Hand-Painted Finish',
     viewBox: '0 0 660 540',
@@ -367,8 +367,9 @@ export default function ArtisticProcessSection() {
           ══════════════════════════════════════════════════════════════════ */}
       <div className="section-bg-feather-top pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <img
-          src="/Backgroundthree.png"
+          src="/Backgroundthree.webp"
           alt=""
+          loading="eager"
           decoding="async"
           style={{ transform: 'translate3d(0,0,0)' }}
           className="h-full w-full object-cover object-center"

@@ -263,13 +263,14 @@ export default function Home() {
 
   const lenisRef = useRef(null);
 
-  // Pre-warm all gallery & section images in browser memory so category tabs & carousels load in 0ms
+  // Pre-warm all gallery & section WebP images in browser memory so category tabs & carousels load in 0ms
   useEffect(() => {
     const urls = [
-      '/Background2.png',
-      '/Backgroundthree.png',
-      '/background4.png',
-      '/background5.png',
+      '/artist.webp',
+      '/Background2.webp',
+      '/Backgroundthree.webp',
+      '/background4.webp',
+      '/background5.webp',
       ...artworks.map((a) => a.image),
     ];
     urls.forEach((src) => {
@@ -638,36 +639,40 @@ export default function Home() {
           </div>
         )}
 
-        {/* Stage 2 (0.15s): Founder Portrait (/artist.png) — Reveals FIRST on the Black Background */}
-        {!showIntro && (
-          <motion.div
-            initial={{ opacity: 0, y: 34, scale: 0.975 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{
-              duration: 0.85,
-              delay: 0.15,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-            className="
-              relative lg:absolute z-20
-              bottom-0
-              mx-auto lg:mx-0
-              mt-3 lg:mt-0
-              w-[270px] sm:w-[360px] md:w-[430px]
-              lg:w-[clamp(560px,41.2vw,790px)]
-              lg:left-[52.4%] lg:-translate-x-1/2
-              pointer-events-none flex items-end justify-center
-              will-change-transform
-            "
-          >
-            <img
-              src="/artist.png"
-              alt="Uday Arts Founder"
-              decoding="async"
-              className="founder-portrait-img w-full h-auto max-h-[48svh] sm:max-h-[56svh] lg:max-h-[96.8svh] object-contain object-bottom"
-            />
-          </motion.div>
-        )}
+        {/* Stage 2 (0.15s): Founder Portrait (/artist.webp) — Pre-mounted & Pre-decoded during Intro Splash so it appears in 0ms */}
+        <motion.div
+          initial={false}
+          animate={
+            showIntro
+              ? { opacity: 0, y: 34, scale: 0.975 }
+              : { opacity: 1, y: 0, scale: 1 }
+          }
+          transition={{
+            duration: 0.85,
+            delay: showIntro ? 0 : 0.12,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className="
+            relative lg:absolute z-20
+            bottom-0
+            mx-auto lg:mx-0
+            mt-3 lg:mt-0
+            w-[270px] sm:w-[360px] md:w-[430px]
+            lg:w-[clamp(560px,41.2vw,790px)]
+            lg:left-[52.4%] lg:-translate-x-1/2
+            pointer-events-none flex items-end justify-center
+            will-change-transform
+          "
+        >
+          <img
+            src="/artist.webp"
+            alt="Uday Arts Founder"
+            loading="eager"
+            fetchPriority="high"
+            decoding="sync"
+            className="founder-portrait-img w-full h-auto max-h-[48svh] sm:max-h-[56svh] lg:max-h-[96.8svh] object-contain object-bottom"
+          />
+        </motion.div>
 
         {/* 4. Soft Bottom Transition Feather Bridge into Section 02 */}
         <div

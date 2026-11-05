@@ -200,7 +200,7 @@ export default function AboutSection({ onDiscoverWork }) {
         className="section-bg-feather-top pointer-events-none absolute inset-0 z-0 overflow-hidden"
       >
         <motion.img
-          src="/background4.png"
+          src="/background4.webp"
           alt=""
           loading="eager"
           decoding="async"
@@ -546,9 +546,9 @@ export default function AboutSection({ onDiscoverWork }) {
         "
       >
         <img
-          src="/artist.png"
+          src="/artist.webp"
           alt="Uday — Founder of UDAY ARTS"
-          loading="lazy"
+          loading="eager"
           decoding="async"
           className="founder-portrait-img w-full h-auto max-h-[58svh] lg:max-h-[86svh] object-contain object-bottom"
         />

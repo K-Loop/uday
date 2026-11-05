@@ -148,9 +148,9 @@ function Footer({
             >
               <div className="relative h-12 w-12 rounded-full p-[1.5px] bg-gradient-to-b from-white/90 via-[#D8A54B] to-white/30 shadow-[0_0_22px_rgba(232,184,96,0.22)]">
                 <img
-                  src="/logo.png"
+                  src="/logo.webp"
                   alt="Uday Arts Official Logo"
-                  loading="lazy"
+                  loading="eager"
                   decoding="async"
                   className="h-full w-full rounded-full object-cover"
                 />
